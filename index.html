@@ -2050,7 +2050,7 @@ function sha256(msg){
 }
 
   var LK='dv-lic',UK='dv-used',CK='dv-cfg-local',CC='dv-cfg-cache',AK='dv-admin-h',DAY=86400000;
-  var LDEF={enabled:false,days:365,price:'',buy:'',howto:'',admin:null,locks:{pdf:true,photo:false,upload:false,export:false},licenses:[]};
+  var LDEF={enabled:false,days:365,price:'',buy:'',howto:'',wa:'',waMsg:'',admin:null,locks:{pdf:true,photo:false,upload:false,export:false},licenses:[]};
   /*PURE-START*/
   function mergeLic(){
     var out=JSON.parse(JSON.stringify(LDEF));
@@ -2061,6 +2061,8 @@ function sha256(msg){
       if(typeof o.price==='string')out.price=o.price.slice(0,80);
       if(typeof o.buy==='string')out.buy=o.buy.slice(0,300);
       if(typeof o.howto==='string')out.howto=o.howto.slice(0,500);
+      if(typeof o.wa==='string')out.wa=o.wa.replace(/[^0-9]/g,'').slice(0,15);
+      if(typeof o.waMsg==='string')out.waMsg=o.waMsg.slice(0,200);
       if(o.admin&&typeof o.admin==='object'&&/^[0-9a-f]{16,64}$/.test(o.admin.s)&&/^[0-9a-f]{64}$/.test(o.admin.h)&&Number.isInteger(o.admin.i)&&o.admin.i>=1000&&o.admin.i<=200000)out.admin={s:o.admin.s,h:o.admin.h,i:o.admin.i};
       if(o.locks&&typeof o.locks==='object')for(var k in out.locks)if(typeof o.locks[k]==='boolean')out.locks[k]=o.locks[k];
       if(Array.isArray(o.licenses))out.licenses=o.licenses.filter(function(x){return typeof x==='string'&&/^[0-9a-f]{64}$/.test(x);});
@@ -2086,10 +2088,9 @@ function sha256(msg){
 
   /* estilos y elementos nuevos (se crean aquí, sin tocar el HTML ni el CSS existentes) */
   var lst=document.createElement('style');
-  lst.textContent='\n/* ===== Responsive: pantallas pequeñas, horizontales, tablets y escritorio ===== */\n@supports (height:100dvh){html,body,.app{height:100dvh}}\n.panel{max-height:52vh;max-height:52dvh;overflow-y:auto;overscroll-behavior:contain}\n.top h1{touch-action:manipulation;-webkit-user-select:none;user-select:none}\n@media (max-width:360px){\n  .top{gap:8px;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}\n  h1{font-size:18px}\n  .seg button{padding:7px 10px;font-size:12px}\n  .panel{padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}\n}\n@media (max-width:480px){\n  .tools{flex-wrap:wrap;justify-content:center;row-gap:4px;overflow-x:visible}\n  .tools .sep{display:none}\n}\n@media (min-width:720px){\n  .panel{align-items:center}\n  .panel>*{width:min(760px,100%)}\n}\n@media (orientation:landscape) and (max-height:560px){\n  .app{display:grid;grid-template-columns:minmax(0,1fr) min(380px,46vw);grid-template-rows:auto minmax(0,1fr)}\n  .top{grid-column:1/-1;padding-top:6px;padding-bottom:6px}\n  h1{font-size:18px}\n  .stage{grid-column:1;grid-row:2}\n  .panel{grid-column:2;grid-row:2;max-height:none;border-top:0;border-left:1px solid var(--line);padding-top:8px;padding-bottom:8px;align-items:stretch}\n  .panel>*{width:auto}\n  .tools{flex-wrap:wrap;justify-content:center;row-gap:4px;overflow-x:visible}\n  .tools .sep{display:none}\n  .app.full{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}\n  .app.full .stage{grid-column:1;grid-row:1}\n}\n/* ===== Estaciones, licencia y ventanas ===== */\n.xctl{position:absolute;z-index:2;right:max(10px,env(safe-area-inset-right,0px));bottom:10px;display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:var(--bar);border:1px solid var(--line);box-shadow:0 6px 16px -8px rgba(0,0,0,.4)}\n.xctl .tool{width:36px;height:36px;border-radius:50%}\n.app.full .xctl{display:none}\n#b-lic[aria-pressed="true"]{background:transparent;color:var(--ink)}\n#b-lic[aria-pressed="true"] svg{fill:#F5B301;stroke:#E09A00}\n.lic-ov{position:fixed;top:0;left:0;width:100%;height:100vh;height:100dvh;z-index:60;background:rgba(10,14,24,.55);display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overscroll-behavior:contain}\n.lic-dlg{position:relative;width:min(600px,100%);max-height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--bar);color:var(--ink);border-radius:20px;padding:20px 18px 18px;box-shadow:0 20px 60px rgba(0,0,0,.4);-webkit-user-select:text;user-select:text}\n.lic-x{float:right;position:sticky;top:0;z-index:2;width:40px;height:40px;margin:-8px -8px 0 8px;border:0;border-radius:50%;background:var(--bar2);color:var(--ink);font:600 24px/1 var(--f-body)}\n.lic-dlg h2{margin:0 0 6px;font:800 22px/1.15 var(--f-display);letter-spacing:-.01em}\n.lic-dlg p{margin:6px 0;font:500 14px/1.45 var(--f-body);color:var(--ink2)}\n.lic-dlg input[type=text],.lic-dlg input[type=number],.lic-dlg input[type=password],.lic-dlg input[type=url]{flex:none;display:block;width:100%;height:auto;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bar2);color:var(--ink);font:500 16px var(--f-body);-webkit-user-select:text;user-select:text}\n.lic-dlg textarea{display:block;width:100%;min-height:84px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bar2);color:var(--ink);font:500 16px var(--f-body);resize:vertical;-webkit-user-select:text;user-select:text}\n.lic-how{white-space:pre-line}\n.lic-fld{display:grid;gap:5px;margin:10px 0;font:600 13px var(--f-display);color:var(--ink2)}\n.lic-chk{display:flex;align-items:center;gap:10px;margin:6px 0;min-height:36px;font:500 14px var(--f-body);color:var(--ink)}\n.lic-chk input{flex:none;width:20px;height:20px}\n.lic-sec{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}\n.lic-sec h3{margin:0 0 4px;font:800 15px var(--f-display)}\n.lic-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}\n.lic-btn{min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bar2);color:var(--ink);font:700 14px var(--f-display)}\n.lic-btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}\n.lic-btn.bad{color:var(--danger)}\n.lic-row{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 0;border-bottom:1px dashed var(--line);font:500 13px var(--f-mono)}\n.lic-row .lic-btn{min-height:36px;padding:6px 12px;font-size:13px}\n.lic-row .lic-name{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}\n.lic-msg{min-height:18px;font:600 13px var(--f-body);margin-top:6px}\n.lic-msg.err{color:var(--danger)}.lic-msg.ok{color:#1c8a4f}\n@media (max-width:420px){.lic-dlg{padding:16px 14px 14px}.lic-btn{flex:1 1 auto}}\n';
+  lst.textContent='\n/* ===== Responsive: pantallas pequeñas, horizontales, tablets y escritorio ===== */\n@supports (height:100dvh){html,body,.app{height:100dvh}}\n.panel{max-height:52vh;max-height:52dvh;overflow-y:auto;overscroll-behavior:contain}\n.top h1{touch-action:manipulation;-webkit-user-select:none;user-select:none}\n@media (max-width:360px){\n  .top{gap:8px;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}\n  h1{font-size:18px}\n  .seg button{padding:7px 10px;font-size:12px}\n  .panel{padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}\n}\n@media (max-width:480px){\n  .tools{flex-wrap:wrap;justify-content:center;row-gap:4px;overflow-x:visible}\n  .tools .sep{display:none}\n}\n@media (min-width:720px){\n  .panel{align-items:center}\n  .panel>*{width:min(760px,100%)}\n}\n@media (orientation:landscape) and (max-height:560px){\n  .app{display:grid;grid-template-columns:minmax(0,1fr) min(380px,46vw);grid-template-rows:auto minmax(0,1fr)}\n  .top{grid-column:1/-1;padding-top:6px;padding-bottom:6px}\n  h1{font-size:18px}\n  .stage{grid-column:1;grid-row:2}\n  .panel{grid-column:2;grid-row:2;max-height:none;border-top:0;border-left:1px solid var(--line);padding-top:8px;padding-bottom:8px;align-items:stretch}\n  .panel>*{width:auto}\n  .tools{flex-wrap:wrap;justify-content:center;row-gap:4px;overflow-x:visible}\n  .tools .sep{display:none}\n  .app.full{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}\n  .app.full .stage{grid-column:1;grid-row:1}\n}\n/* ===== Estaciones, licencia y ventanas ===== */\n.xctl{position:absolute;z-index:2;right:max(10px,env(safe-area-inset-right,0px));bottom:10px;display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:var(--bar);border:1px solid var(--line);box-shadow:0 6px 16px -8px rgba(0,0,0,.4)}\n.xctl .tool{width:36px;height:36px;border-radius:50%}\n.app.full .xctl{display:none}\n.lic-ov{position:fixed;top:0;left:0;width:100%;height:100vh;height:100dvh;z-index:60;background:rgba(10,14,24,.55);display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overscroll-behavior:contain}\n.lic-dlg{position:relative;width:min(600px,100%);max-height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--bar);color:var(--ink);border-radius:20px;padding:20px 18px 18px;box-shadow:0 20px 60px rgba(0,0,0,.4);-webkit-user-select:text;user-select:text}\n.lic-x{float:right;position:sticky;top:0;z-index:2;width:40px;height:40px;margin:-8px -8px 0 8px;border:0;border-radius:50%;background:var(--bar2);color:var(--ink);font:600 24px/1 var(--f-body)}\n.lic-dlg h2{margin:0 0 6px;font:800 22px/1.15 var(--f-display);letter-spacing:-.01em}\n.lic-dlg p{margin:6px 0;font:500 14px/1.45 var(--f-body);color:var(--ink2)}\n.lic-dlg input[type=text],.lic-dlg input[type=number],.lic-dlg input[type=password],.lic-dlg input[type=url],.lic-dlg input[type=tel]{flex:none;display:block;width:100%;height:auto;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bar2);color:var(--ink);font:500 16px var(--f-body);-webkit-user-select:text;user-select:text}\n.lic-dlg textarea{display:block;width:100%;min-height:84px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bar2);color:var(--ink);font:500 16px var(--f-body);resize:vertical;-webkit-user-select:text;user-select:text}\n.lic-how{white-space:pre-line}\n.lic-fld{display:grid;gap:5px;margin:10px 0;font:600 13px var(--f-display);color:var(--ink2)}\n.lic-chk{display:flex;align-items:center;gap:10px;margin:6px 0;min-height:36px;font:500 14px var(--f-body);color:var(--ink)}\n.lic-chk input{flex:none;width:20px;height:20px}\n.lic-sec{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}\n.lic-sec h3{margin:0 0 4px;font:800 15px var(--f-display)}\n.lic-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}\n.lic-btn{min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bar2);color:var(--ink);font:700 14px var(--f-display)}\n.lic-btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}\n.lic-btn.bad{color:var(--danger)}\n.lic-btn.wa{background:#25D366;border-color:#25D366;color:#06330f}\na.lic-btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;text-align:center}\n.lic-row{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 0;border-bottom:1px dashed var(--line);font:500 13px var(--f-mono)}\n.lic-row .lic-btn{min-height:36px;padding:6px 12px;font-size:13px}\n.lic-row .lic-name{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}\n.lic-msg{min-height:18px;font:600 13px var(--f-body);margin-top:6px}\n.lic-msg.err{color:var(--danger)}.lic-msg.ok{color:#1c8a4f}\n@media (max-width:420px){.lic-dlg{padding:16px 14px 14px}.lic-btn{flex:1 1 auto}}\n';
   document.head.appendChild(lst);
   ICONS.page='<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>';
-  ICONS.star='<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>';
   ICONS.ws='<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>';
   function mkTool(id,label,ic){
     var b=document.createElement('button');b.type='button';b.className='tool';b.id=id;
@@ -2097,10 +2098,9 @@ function sha256(msg){
     var sp=document.createElement('span');sp.className='i';icon(sp,ic);b.appendChild(sp);
     return b;
   }
-  var bBlank=mkTool('b-blank','Nueva estación en blanco','page'),bWs=mkTool('b-ws','Estaciones de trabajo','ws'),bLic=mkTool('b-lic','Licencia','star');
-  bLic.setAttribute('aria-pressed','false');bLic.hidden=true;
-  var xc=document.createElement('div');xc.className='xctl';xc.id='xctl';xc.setAttribute('role','group');xc.setAttribute('aria-label','Estaciones y licencia');
-  xc.appendChild(bBlank);xc.appendChild(bWs);xc.appendChild(bLic);$('stage').appendChild(xc);
+  var bBlank=mkTool('b-blank','Nueva estación en blanco','page'),bWs=mkTool('b-ws','Estaciones de trabajo','ws');
+  var xc=document.createElement('div');xc.className='xctl';xc.id='xctl';xc.setAttribute('role','group');xc.setAttribute('aria-label','Estaciones de trabajo');
+  xc.appendChild(bBlank);xc.appendChild(bWs);$('stage').appendChild(xc);
 
   var lov=document.createElement('div');lov.className='lic-ov';lov.hidden=true;
   var ldlg=document.createElement('div');ldlg.className='lic-dlg';ldlg.setAttribute('role','dialog');ldlg.setAttribute('aria-modal','true');
@@ -2127,12 +2127,7 @@ function sha256(msg){
   lov.addEventListener('click',function(e){if(e.target===lov)closeDlg();});
   window.addEventListener('keydown',function(e){if(e.key==='Escape'&&!lov.hidden)closeDlg();});
   function openUrl(u){if(!u)return;if(!/^https?:\/\//i.test(u))u='https://'+u;window.open(u,'_blank','noopener');}
-  function refreshLic(){
-    bLic.hidden=!LCFG.enabled;
-    var ok=hasAccess();
-    bLic.setAttribute('aria-pressed',ok);
-    var lb=ok?'Licencia activa':'Activar licencia';bLic.setAttribute('aria-label',lb);bLic.setAttribute('title',lb);
-  }
+  function refreshLic(){}
 
   /* ---- Estaciones de trabajo: cada una es un espacio completo (todas sus hojas con fotos, figura, textos y caras) ---- */
   var WK='dv-ws-v1',WNK='dv-ws-n',MAXWS=8;
@@ -2275,7 +2270,6 @@ function sha256(msg){
     var key=LOCKMAP[t.id];
     if(key&&isLocked(key)){e.stopPropagation();e.preventDefault();openLic(key);}
   },true);
-  bLic.addEventListener('click',function(){openLic(null);});
 
   /* ---- Pantalla de activación ---- */
   function buyBlock(){
@@ -2284,9 +2278,13 @@ function sha256(msg){
     if(LCFG.price)out.push(h('p',{text:LCFG.price,style:'font:800 20px var(--f-display);color:var(--ink)'}));
     if(LCFG.howto)out.push(h('p',{cls:'lic-how',text:LCFG.howto}));
     var bt=[];
+    if(LCFG.wa&&LCFG.wa.length>=8){
+      var wm=LCFG.waMsg||('Hola, quiero comprar la licencia de Dibujo Vivo ('+durText(LCFG.days)+').');
+      bt.push(h('a',{cls:'lic-btn wa',href:'https://wa.me/'+LCFG.wa+'?text='+encodeURIComponent(wm),target:'_blank',rel:'noopener',text:'Enviar mensaje por WhatsApp'}));
+    }
     if(LCFG.buy)bt.push(h('button',{cls:'lic-btn pri',type:'button',text:'Comprar código',onclick:function(){openUrl(LCFG.buy);}}));
     if(bt.length)out.push(h('div',{cls:'lic-btns'},bt));
-    if(!LCFG.price&&!LCFG.howto&&!LCFG.buy)out.push(h('p',{text:'El administrador todavía no configuró el precio ni cómo comprar.'}));
+    if(!LCFG.price&&!LCFG.howto&&!LCFG.buy&&!(LCFG.wa&&LCFG.wa.length>=8))out.push(h('p',{text:'El administrador todavía no configuró el precio ni cómo comprar.'}));
     out.push(h('p',{text:'Después de pagar recibirás un código para escribir aquí abajo.'}));
     return out;
   }
@@ -2299,7 +2297,7 @@ function sha256(msg){
       nodes.push(h('div',{cls:'lic-btns'},[h('button',{cls:'lic-btn',type:'button',text:'Cerrar',onclick:closeDlg})]));
       openDlg(nodes);return;
     }
-    nodes.push(h('h2',{text:info.ok?'Licencia activa ★':'Activa tu licencia'}));
+    nodes.push(h('h2',{text:info.ok?'Licencia activa':'Activa tu licencia'}));
     if(info.ok){
       nodes.push(h('p',{text:'Tu licencia está activa hasta el '+fmtDate(info.exp)+'.'}));
       nodes.push(h('div',{cls:'lic-btns'},[
@@ -2464,9 +2462,11 @@ function sha256(msg){
         chk('Subir figura',function(){return D.locks.upload;},function(v){D.locks.upload=v;}),
         chk('Descargar y compartir',function(){return D.locks.export;},function(v){D.locks.export=v;})]),
       h('div',{cls:'lic-sec'},[h('h3',{text:'Compra (opcional)'}),
-        h('p',{text:'Esto es lo que verá tu cliente al querer comprar. Llena al menos uno: precio, instrucciones o enlace.'}),
+        h('p',{text:'Esto es lo que verá tu cliente al querer comprar. Llena al menos uno: precio, instrucciones, WhatsApp o enlace.'}),
         txt('Texto del precio',function(){return D.price;},function(v){D.price=v;},'Licencia anual $4.99'),
         txtArea('Cómo comprar (ej. escribe a mi WhatsApp +00 000 000 0000)',function(){return D.howto;},function(v){D.howto=v;},'Paga por transferencia y envíame el comprobante por WhatsApp.'),
+        txt('Número de WhatsApp con código de país (ej. 573001234567)',function(){return D.wa;},function(v){D.wa=v;},'573001234567','tel'),
+        txt('Mensaje que se enviará por WhatsApp (opcional)',function(){return D.waMsg;},function(v){D.waMsg=v;},'Hola, quiero comprar la licencia de Dibujo Vivo.'),
         txt('Enlace de pago (opcional)',function(){return D.buy;},function(v){D.buy=v.trim();},'https://','url'),
         h('div',{cls:'lic-btns'},[h('button',{cls:'lic-btn',type:'button',text:'Ver cómo lo ve el cliente',onclick:function(){apply();openLic(null,true);}})])]),
       h('div',{cls:'lic-sec'},[h('h3',{text:'Códigos de licencia'}),
@@ -2507,7 +2507,7 @@ function sha256(msg){
   }catch(e){}
   (function(){
     var l=jget(LK,null);
-    if(LCFG.enabled&&l&&typeof l.exp==='number'&&Date.now()>=l.exp&&!adminOn())setTimeout(function(){say('Tu licencia venció el '+fmtDate(l.exp)+'. Activa un código nuevo con la estrella.',5200);},800);
+    if(LCFG.enabled&&l&&typeof l.exp==='number'&&Date.now()>=l.exp&&!adminOn())setTimeout(function(){say('Tu licencia venció el '+fmtDate(l.exp)+'. Toca una función bloqueada, por ejemplo Subir PDF, para activar un código nuevo.',5200);},800);
   })();
 
   /* ---------- start ---------- */
