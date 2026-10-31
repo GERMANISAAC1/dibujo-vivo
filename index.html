@@ -2050,7 +2050,7 @@ function sha256(msg){
 }
 
   var LK='dv-lic',UK='dv-used',CK='dv-cfg-local',CC='dv-cfg-cache',AK='dv-admin-h',DAY=86400000;
-  var LDEF={enabled:false,days:365,price:'',buy:'',locks:{pdf:true,photo:false,upload:false,export:false},licenses:[]};
+  var LDEF={enabled:false,days:365,price:'',buy:'',howto:'',admin:null,locks:{pdf:true,photo:false,upload:false,export:false},licenses:[]};
   /*PURE-START*/
   function mergeLic(){
     var out=JSON.parse(JSON.stringify(LDEF));
@@ -2060,6 +2060,8 @@ function sha256(msg){
       if(typeof o.days==='number'&&isFinite(o.days))out.days=Math.max(1,Math.min(3650,Math.round(o.days)));
       if(typeof o.price==='string')out.price=o.price.slice(0,80);
       if(typeof o.buy==='string')out.buy=o.buy.slice(0,300);
+      if(typeof o.howto==='string')out.howto=o.howto.slice(0,500);
+      if(o.admin&&typeof o.admin==='object'&&/^[0-9a-f]{16,64}$/.test(o.admin.s)&&/^[0-9a-f]{64}$/.test(o.admin.h)&&Number.isInteger(o.admin.i)&&o.admin.i>=1000&&o.admin.i<=200000)out.admin={s:o.admin.s,h:o.admin.h,i:o.admin.i};
       if(o.locks&&typeof o.locks==='object')for(var k in out.locks)if(typeof o.locks[k]==='boolean')out.locks[k]=o.locks[k];
       if(Array.isArray(o.licenses))out.licenses=o.licenses.filter(function(x){return typeof x==='string'&&/^[0-9a-f]{64}$/.test(x);});
     }
@@ -2070,6 +2072,7 @@ function sha256(msg){
   function jget(k,d){try{var t=localStorage.getItem(k);return t?JSON.parse(t):d;}catch(e){return d;}}
   function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
   var LCFG=mergeLic(jget(CC,null),jget(CK,null));
+  var cfgState='pending',remoteAdminH=(function(){var c=jget(CC,null),m=c?mergeLic(c):null;return m&&m.admin?m.admin.h:'';})();
   function adminOn(){try{return sessionStorage.getItem('dv-admin')==='1'&&localStorage.getItem('dv-adminfree')!=='1';}catch(e){return false;}}
   function licInfo(){
     var l=jget(LK,null);
@@ -2083,7 +2086,7 @@ function sha256(msg){
 
   /* estilos y elementos nuevos (se crean aquí, sin tocar el HTML ni el CSS existentes) */
   var lst=document.createElement('style');
-  lst.textContent='\n/* ===== Responsive: pantallas pequeñas, horizontales, tablets y escritorio ===== */\n@supports (height:100dvh){html,body,.app{height:100dvh}}\n.panel{max-height:52vh;max-height:52dvh;overflow-y:auto;overscroll-behavior:contain}\n.top h1{touch-action:manipulation;-webkit-user-select:none;user-select:none}\n@media (max-width:360px){\n  .top{gap:8px;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}\n  h1{font-size:18px}\n  .seg button{padding:7px 10px;font-size:12px}\n  .panel{padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}\n}\n@media (max-width:480px){\n  .tools{flex-wrap:wrap;justify-content:center;row-gap:4px;overflow-x:visible}\n  .tools .sep{display:none}\n}\n@media (min-width:720px){\n  .panel{align-items:center}\n  .panel>*{width:min(760px,100%)}\n}\n@media (orientation:landscape) and (max-height:560px){\n  .app{display:grid;grid-template-columns:minmax(0,1fr) min(380px,46vw);grid-template-rows:auto minmax(0,1fr)}\n  .top{grid-column:1/-1;padding-top:6px;padding-bottom:6px}\n  h1{font-size:18px}\n  .stage{grid-column:1;grid-row:2}\n  .panel{grid-column:2;grid-row:2;max-height:none;border-top:0;border-left:1px solid var(--line);padding-top:8px;padding-bottom:8px;align-items:stretch}\n  .panel>*{width:auto}\n  .tools{flex-wrap:wrap;justify-content:center;row-gap:4px;overflow-x:visible}\n  .tools .sep{display:none}\n  .app.full{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}\n  .app.full .stage{grid-column:1;grid-row:1}\n}\n/* ===== Estaciones, licencia y ventanas ===== */\n.xctl{position:absolute;z-index:2;right:max(10px,env(safe-area-inset-right,0px));bottom:10px;display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:var(--bar);border:1px solid var(--line);box-shadow:0 6px 16px -8px rgba(0,0,0,.4)}\n.xctl .tool{width:36px;height:36px;border-radius:50%}\n.app.full .xctl{display:none}\n#b-lic[aria-pressed="true"]{background:transparent;color:var(--ink)}\n#b-lic[aria-pressed="true"] svg{fill:#F5B301;stroke:#E09A00}\n.lic-ov{position:fixed;top:0;left:0;width:100%;height:100vh;height:100dvh;z-index:60;background:rgba(10,14,24,.55);display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overscroll-behavior:contain}\n.lic-dlg{position:relative;width:min(600px,100%);max-height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--bar);color:var(--ink);border-radius:20px;padding:20px 18px 18px;box-shadow:0 20px 60px rgba(0,0,0,.4);-webkit-user-select:text;user-select:text}\n.lic-x{float:right;position:sticky;top:0;z-index:2;width:40px;height:40px;margin:-8px -8px 0 8px;border:0;border-radius:50%;background:var(--bar2);color:var(--ink);font:600 24px/1 var(--f-body)}\n.lic-dlg h2{margin:0 0 6px;font:800 22px/1.15 var(--f-display);letter-spacing:-.01em}\n.lic-dlg p{margin:6px 0;font:500 14px/1.45 var(--f-body);color:var(--ink2)}\n.lic-dlg input[type=text],.lic-dlg input[type=number],.lic-dlg input[type=password],.lic-dlg input[type=url]{flex:none;display:block;width:100%;height:auto;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bar2);color:var(--ink);font:500 16px var(--f-body);-webkit-user-select:text;user-select:text}\n.lic-fld{display:grid;gap:5px;margin:10px 0;font:600 13px var(--f-display);color:var(--ink2)}\n.lic-chk{display:flex;align-items:center;gap:10px;margin:6px 0;min-height:36px;font:500 14px var(--f-body);color:var(--ink)}\n.lic-chk input{flex:none;width:20px;height:20px}\n.lic-sec{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}\n.lic-sec h3{margin:0 0 4px;font:800 15px var(--f-display)}\n.lic-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}\n.lic-btn{min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bar2);color:var(--ink);font:700 14px var(--f-display)}\n.lic-btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}\n.lic-btn.bad{color:var(--danger)}\n.lic-row{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 0;border-bottom:1px dashed var(--line);font:500 13px var(--f-mono)}\n.lic-row .lic-btn{min-height:36px;padding:6px 12px;font-size:13px}\n.lic-row .lic-name{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}\n.lic-msg{min-height:18px;font:600 13px var(--f-body);margin-top:6px}\n.lic-msg.err{color:var(--danger)}.lic-msg.ok{color:#1c8a4f}\n@media (max-width:420px){.lic-dlg{padding:16px 14px 14px}.lic-btn{flex:1 1 auto}}\n';
+  lst.textContent='\n/* ===== Responsive: pantallas pequeñas, horizontales, tablets y escritorio ===== */\n@supports (height:100dvh){html,body,.app{height:100dvh}}\n.panel{max-height:52vh;max-height:52dvh;overflow-y:auto;overscroll-behavior:contain}\n.top h1{touch-action:manipulation;-webkit-user-select:none;user-select:none}\n@media (max-width:360px){\n  .top{gap:8px;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}\n  h1{font-size:18px}\n  .seg button{padding:7px 10px;font-size:12px}\n  .panel{padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}\n}\n@media (max-width:480px){\n  .tools{flex-wrap:wrap;justify-content:center;row-gap:4px;overflow-x:visible}\n  .tools .sep{display:none}\n}\n@media (min-width:720px){\n  .panel{align-items:center}\n  .panel>*{width:min(760px,100%)}\n}\n@media (orientation:landscape) and (max-height:560px){\n  .app{display:grid;grid-template-columns:minmax(0,1fr) min(380px,46vw);grid-template-rows:auto minmax(0,1fr)}\n  .top{grid-column:1/-1;padding-top:6px;padding-bottom:6px}\n  h1{font-size:18px}\n  .stage{grid-column:1;grid-row:2}\n  .panel{grid-column:2;grid-row:2;max-height:none;border-top:0;border-left:1px solid var(--line);padding-top:8px;padding-bottom:8px;align-items:stretch}\n  .panel>*{width:auto}\n  .tools{flex-wrap:wrap;justify-content:center;row-gap:4px;overflow-x:visible}\n  .tools .sep{display:none}\n  .app.full{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}\n  .app.full .stage{grid-column:1;grid-row:1}\n}\n/* ===== Estaciones, licencia y ventanas ===== */\n.xctl{position:absolute;z-index:2;right:max(10px,env(safe-area-inset-right,0px));bottom:10px;display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:var(--bar);border:1px solid var(--line);box-shadow:0 6px 16px -8px rgba(0,0,0,.4)}\n.xctl .tool{width:36px;height:36px;border-radius:50%}\n.app.full .xctl{display:none}\n#b-lic[aria-pressed="true"]{background:transparent;color:var(--ink)}\n#b-lic[aria-pressed="true"] svg{fill:#F5B301;stroke:#E09A00}\n.lic-ov{position:fixed;top:0;left:0;width:100%;height:100vh;height:100dvh;z-index:60;background:rgba(10,14,24,.55);display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overscroll-behavior:contain}\n.lic-dlg{position:relative;width:min(600px,100%);max-height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--bar);color:var(--ink);border-radius:20px;padding:20px 18px 18px;box-shadow:0 20px 60px rgba(0,0,0,.4);-webkit-user-select:text;user-select:text}\n.lic-x{float:right;position:sticky;top:0;z-index:2;width:40px;height:40px;margin:-8px -8px 0 8px;border:0;border-radius:50%;background:var(--bar2);color:var(--ink);font:600 24px/1 var(--f-body)}\n.lic-dlg h2{margin:0 0 6px;font:800 22px/1.15 var(--f-display);letter-spacing:-.01em}\n.lic-dlg p{margin:6px 0;font:500 14px/1.45 var(--f-body);color:var(--ink2)}\n.lic-dlg input[type=text],.lic-dlg input[type=number],.lic-dlg input[type=password],.lic-dlg input[type=url]{flex:none;display:block;width:100%;height:auto;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bar2);color:var(--ink);font:500 16px var(--f-body);-webkit-user-select:text;user-select:text}\n.lic-dlg textarea{display:block;width:100%;min-height:84px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bar2);color:var(--ink);font:500 16px var(--f-body);resize:vertical;-webkit-user-select:text;user-select:text}\n.lic-how{white-space:pre-line}\n.lic-fld{display:grid;gap:5px;margin:10px 0;font:600 13px var(--f-display);color:var(--ink2)}\n.lic-chk{display:flex;align-items:center;gap:10px;margin:6px 0;min-height:36px;font:500 14px var(--f-body);color:var(--ink)}\n.lic-chk input{flex:none;width:20px;height:20px}\n.lic-sec{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}\n.lic-sec h3{margin:0 0 4px;font:800 15px var(--f-display)}\n.lic-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}\n.lic-btn{min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bar2);color:var(--ink);font:700 14px var(--f-display)}\n.lic-btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}\n.lic-btn.bad{color:var(--danger)}\n.lic-row{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 0;border-bottom:1px dashed var(--line);font:500 13px var(--f-mono)}\n.lic-row .lic-btn{min-height:36px;padding:6px 12px;font-size:13px}\n.lic-row .lic-name{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}\n.lic-msg{min-height:18px;font:600 13px var(--f-body);margin-top:6px}\n.lic-msg.err{color:var(--danger)}.lic-msg.ok{color:#1c8a4f}\n@media (max-width:420px){.lic-dlg{padding:16px 14px 14px}.lic-btn{flex:1 1 auto}}\n';
   document.head.appendChild(lst);
   ICONS.page='<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>';
   ICONS.star='<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>';
@@ -2275,9 +2278,28 @@ function sha256(msg){
   bLic.addEventListener('click',function(){openLic(null);});
 
   /* ---- Pantalla de activación ---- */
-  function openLic(why){
+  function buyBlock(){
+    var out=[];
+    out.push(h('h3',{text:'Cómo comprar',style:'margin:14px 0 4px;font:800 15px var(--f-display)'}));
+    if(LCFG.price)out.push(h('p',{text:LCFG.price,style:'font:800 20px var(--f-display);color:var(--ink)'}));
+    if(LCFG.howto)out.push(h('p',{cls:'lic-how',text:LCFG.howto}));
+    var bt=[];
+    if(LCFG.buy)bt.push(h('button',{cls:'lic-btn pri',type:'button',text:'Comprar código',onclick:function(){openUrl(LCFG.buy);}}));
+    if(bt.length)out.push(h('div',{cls:'lic-btns'},bt));
+    if(!LCFG.price&&!LCFG.howto&&!LCFG.buy)out.push(h('p',{text:'El administrador todavía no configuró el precio ni cómo comprar.'}));
+    out.push(h('p',{text:'Después de pagar recibirás un código para escribir aquí abajo.'}));
+    return out;
+  }
+  function openLic(why,asUser){
     var info=licInfo(),nodes=[],msg=h('div',{cls:'lic-msg'});
-    nodes.push(h('h2',{text:(info.ok||adminOn())?'Licencia activa ★':'Activa tu licencia'}));
+    if(adminOn()&&!asUser){
+      nodes.push(h('h2',{text:'Licencia'}));
+      nodes.push(h('p',{text:'Eres administrador: tienes todo desbloqueado en este navegador. Así ve tu cliente la compra:'}));
+      buyBlock().forEach(function(n){nodes.push(n);});
+      nodes.push(h('div',{cls:'lic-btns'},[h('button',{cls:'lic-btn',type:'button',text:'Cerrar',onclick:closeDlg})]));
+      openDlg(nodes);return;
+    }
+    nodes.push(h('h2',{text:info.ok?'Licencia activa ★':'Activa tu licencia'}));
     if(info.ok){
       nodes.push(h('p',{text:'Tu licencia está activa hasta el '+fmtDate(info.exp)+'.'}));
       nodes.push(h('div',{cls:'lic-btns'},[
@@ -2286,15 +2308,10 @@ function sha256(msg){
       ]));
       openDlg(nodes);return;
     }
-    if(adminOn()){
-      nodes.push(h('p',{text:'Eres administrador: tienes todo desbloqueado en este navegador.'}));
-      nodes.push(h('div',{cls:'lic-btns'},[h('button',{cls:'lic-btn',type:'button',text:'Cerrar',onclick:closeDlg})]));
-      openDlg(nodes);return;
-    }
     var names={pdf:'Subir PDF',photo:'la herramienta Foto',upload:'Subir figura',export:'Descargar y compartir'};
-    nodes.push(h('p',{text:(why&&names[why])?('Para usar '+names[why]+' necesitas una licencia de '+durText(LCFG.days)+'.'):('Escribe el código que recibiste. La licencia dura '+durText(LCFG.days)+' desde que la activas.')}));
+    nodes.push(h('p',{text:(why&&names[why])?('Para usar '+names[why]+' necesitas una licencia de '+durText(LCFG.days)+'.'):('La licencia dura '+durText(LCFG.days)+' desde que la activas.')}));
     if(info.exp&&info.exp<=Date.now())nodes.push(h('p',{text:'Tu licencia anterior venció el '+fmtDate(info.exp)+'.'}));
-    if(LCFG.price)nodes.push(h('p',{text:LCFG.price,style:'font:800 20px var(--f-display);color:var(--ink)'}));
+    buyBlock().forEach(function(n){nodes.push(n);});
     var inp=h('input',{type:'text',placeholder:'DV-XXXX-XXXX',autocomplete:'off',autocapitalize:'characters',spellcheck:'false','aria-label':'Código de licencia'});
     function activate(){
       var c=normCode(inp.value);
@@ -2308,44 +2325,85 @@ function sha256(msg){
       refreshLic();closeDlg();say('¡Licencia activa hasta el '+fmtDate(exp)+'!',4200);
     }
     inp.addEventListener('keydown',function(e){if(e.key==='Enter')activate();});
-    nodes.push(h('label',{cls:'lic-fld'},['Código',inp]),msg);
-    var bt=[h('button',{cls:'lic-btn pri',type:'button',text:'Activar',onclick:activate})];
-    if(LCFG.buy)bt.push(h('button',{cls:'lic-btn',type:'button',text:'Comprar código',onclick:function(){openUrl(LCFG.buy);}}));
-    bt.push(h('button',{cls:'lic-btn',type:'button',text:'Ahora no',onclick:closeDlg}));
-    nodes.push(h('div',{cls:'lic-btns'},bt));
+    nodes.push(h('div',{cls:'lic-sec'},[h('h3',{text:'¿Ya tienes tu código?'}),h('label',{cls:'lic-fld'},['Código',inp]),msg]));
+    nodes.push(h('div',{cls:'lic-btns'},[h('button',{cls:'lic-btn pri',type:'button',text:'Activar',onclick:activate}),h('button',{cls:'lic-btn',type:'button',text:'Ahora no',onclick:closeDlg})]));
     openDlg(nodes);
   }
 
   /* ---- Admin: se abre tocando 7 veces seguidas el título ---- */
-  function admHash(pw){return sha256('dvadmin|'+pw);}
+  function hashPw(pw,salt,iter){var x=sha256(salt+'|'+pw);for(var i=1;i<iter;i++)x=sha256(x+salt);return x;}
+  function newCred(pw){
+    var a=new Uint8Array(16),s='';(window.crypto||window.msCrypto).getRandomValues(a);
+    for(var i=0;i<a.length;i++)s+=('0'+a[i].toString(16)).slice(-2);
+    return {s:s,h:hashPw(pw,s,20000),i:20000};
+  }
+  function legacyHash(pw){return sha256('dvadmin|'+pw);}
+  function setAdminCred(c){LCFG=mergeLic(LCFG,{admin:c});jset(CK,LCFG);}
   function openAdmin(){
-    var stored='';try{stored=localStorage.getItem(AK)||'';}catch(e){}
     try{if(sessionStorage.getItem('dv-admin')==='1'){adminPanel();return;}}catch(e){}
-    var msg=h('div',{cls:'lic-msg'}),pw=h('input',{type:'password',autocomplete:'current-password','aria-label':'Contraseña'}),pw2=h('input',{type:'password',autocomplete:'new-password','aria-label':'Repite la contraseña'});
+    var cred=LCFG.admin,legacy='';try{legacy=localStorage.getItem(AK)||'';}catch(e){}
+    var create=!cred&&!legacy,busy=false;
+    var msg=h('div',{cls:'lic-msg'}),pw=h('input',{type:'password',autocomplete:create?'new-password':'current-password','aria-label':'Contraseña'}),pw2=h('input',{type:'password',autocomplete:'new-password','aria-label':'Repite la contraseña'});
+    function err(t){msg.className='lic-msg err';msg.textContent=t;}
+    function enter(){try{sessionStorage.setItem('dv-admin','1');}catch(e){}refreshLic();adminPanel();}
     function go(){
-      if(!stored){
-        if(pw.value.length<6){msg.className='lic-msg err';msg.textContent='Usa al menos 6 caracteres.';return;}
-        if(pw.value!==pw2.value){msg.className='lic-msg err';msg.textContent='Las contraseñas no coinciden.';return;}
-        try{localStorage.setItem(AK,admHash(pw.value));sessionStorage.setItem('dv-admin','1');}catch(e){}
-        refreshLic();adminPanel();
-      }else if(admHash(pw.value)===stored){
-        try{sessionStorage.setItem('dv-admin','1');}catch(e){}
-        refreshLic();adminPanel();
-      }else{msg.className='lic-msg err';msg.textContent='Contraseña incorrecta.';}
+      if(busy)return;
+      if(create){
+        if(pw.value.length<6){err('Usa al menos 6 caracteres.');return;}
+        if(pw.value!==pw2.value){err('Las contraseñas no coinciden.');return;}
+      }else if(!pw.value){err('Escribe tu contraseña.');return;}
+      busy=true;msg.className='lic-msg';msg.textContent='Verificando…';
+      setTimeout(function(){
+        var ok=false;
+        try{
+          if(create){setAdminCred(newCred(pw.value));ok=true;}
+          else if(cred){ok=hashPw(pw.value,cred.s,cred.i)===cred.h;}
+          else{ok=legacyHash(pw.value)===legacy;if(ok)setAdminCred(newCred(pw.value));}
+        }catch(e){}
+        busy=false;
+        if(ok)enter();else err('Contraseña incorrecta.');
+      },30);
     }
-    pw.addEventListener('keydown',function(e){if(e.key==='Enter'&&stored)go();});
+    pw.addEventListener('keydown',function(e){if(e.key==='Enter'&&!create)go();});
     pw2.addEventListener('keydown',function(e){if(e.key==='Enter')go();});
-    var nodes=[h('h2',{text:'Admin'}),h('p',{text:stored?'Escribe tu contraseña de administrador.':'Primera vez: crea una contraseña para este navegador.'}),
-      h('label',{cls:'lic-fld'},[stored?'Contraseña':'Nueva contraseña',pw])];
-    if(!stored)nodes.push(h('label',{cls:'lic-fld'},['Repite la contraseña',pw2]));
-    nodes.push(msg,h('div',{cls:'lic-btns'},[h('button',{cls:'lic-btn pri',type:'button',text:stored?'Entrar':'Crear y entrar',onclick:go}),h('button',{cls:'lic-btn',type:'button',text:'Cerrar',onclick:closeDlg})]));
+    var nodes=[h('h2',{text:'Admin'})];
+    if(create){
+      nodes.push(h('p',{text:'Crea tu contraseña de administrador. Es única: queda dentro del config.json y, cuando lo subas a GitHub, valdrá en todos tus navegadores y dispositivos.'}));
+      if(cfgState!=='ok')nodes.push(h('p',{text:'Aviso: no pude leer el config.json del sitio (todavía no existe o no hay internet). Si ya creaste tu contraseña antes, cierra esto, conéctate a internet y vuelve a intentarlo.',style:'color:var(--danger)'}));
+    }else nodes.push(h('p',{text:'Escribe tu contraseña de administrador.'}));
+    nodes.push(h('label',{cls:'lic-fld'},[create?'Nueva contraseña':'Contraseña',pw]));
+    if(create)nodes.push(h('label',{cls:'lic-fld'},['Repite la contraseña',pw2]));
+    nodes.push(msg,h('div',{cls:'lic-btns'},[h('button',{cls:'lic-btn pri',type:'button',text:create?'Crear y entrar':'Entrar',onclick:go}),h('button',{cls:'lic-btn',type:'button',text:'Cerrar',onclick:closeDlg})]));
     openDlg(nodes);
+  }
+  function adminSynced(){return !!(LCFG.admin&&LCFG.admin.h===remoteAdminH);}
+  function adminNote(){
+    return adminSynced()
+      ?h('p',{text:'✓ Tu contraseña ya está en el config.json del sitio: vale en todos los navegadores y dispositivos.',style:'color:#1c8a4f;font-weight:600'})
+      :h('p',{text:'Tu contraseña todavía solo vale en este navegador. Toca «Descargar config.json» y súbelo a GitHub para que valga en todos.',style:'color:var(--danger);font-weight:600'});
+  }
+  function changePw(){
+    var a=h('input',{type:'password',autocomplete:'new-password','aria-label':'Nueva contraseña'}),b2=h('input',{type:'password',autocomplete:'new-password','aria-label':'Repite la contraseña'}),m=h('div',{cls:'lic-msg'});
+    function save(){
+      if(a.value.length<6){m.className='lic-msg err';m.textContent='Usa al menos 6 caracteres.';return;}
+      if(a.value!==b2.value){m.className='lic-msg err';m.textContent='Las contraseñas no coinciden.';return;}
+      m.className='lic-msg';m.textContent='Guardando…';
+      setTimeout(function(){setAdminCred(newCred(a.value));adminPanel();},30);
+    }
+    b2.addEventListener('keydown',function(e){if(e.key==='Enter')save();});
+    openDlg([h('h2',{text:'Cambiar contraseña'}),h('p',{text:'La nueva contraseña también se guarda en el config.json: descárgalo y súbelo para que valga en todos los navegadores.'}),
+      h('label',{cls:'lic-fld'},['Nueva contraseña',a]),h('label',{cls:'lic-fld'},['Repite la contraseña',b2]),m,
+      h('div',{cls:'lic-btns'},[h('button',{cls:'lic-btn pri',type:'button',text:'Guardar',onclick:save}),h('button',{cls:'lic-btn',type:'button',text:'Volver',onclick:adminPanel})])]);
   }
   function adminPanel(){
     var D=mergeLic(LCFG),codes=jget('dv-codes',{}),note=h('div',{cls:'lic-msg'});
     function say2(t,ok){note.className='lic-msg '+(ok===false?'err':'ok');note.textContent=t;}
     function txt(label,get,set,ph,type){
       var i=h('input',{type:type||'text',value:get(),placeholder:ph||''});i.addEventListener('input',function(){set(i.value);});
+      return h('label',{cls:'lic-fld'},[label,i]);
+    }
+    function txtArea(label,get,set,ph){
+      var i=h('textarea',{placeholder:ph||'',maxlength:'500'});i.value=get();i.addEventListener('input',function(){set(i.value);});
       return h('label',{cls:'lic-fld'},[label,i]);
     }
     function num(label,get,set,min,max){
@@ -2397,6 +2455,7 @@ function sha256(msg){
     openDlg([
       h('h2',{text:'Panel de admin'}),
       h('p',{text:'Los cambios solo se ven en este navegador hasta que subas el config.json a GitHub, en la misma carpeta que index.html.'}),
+      adminNote(),
       chk('Activar licencias (bloquear funciones sin código)',function(){return D.enabled;},function(v){D.enabled=v;}),
       num('Duración de la licencia (días, 365 = 1 año)',function(){return D.days;},function(v){D.days=v;},1,3650),
       h('div',{cls:'lic-sec'},[h('h3',{text:'Funciones que piden licencia'}),
@@ -2405,8 +2464,11 @@ function sha256(msg){
         chk('Subir figura',function(){return D.locks.upload;},function(v){D.locks.upload=v;}),
         chk('Descargar y compartir',function(){return D.locks.export;},function(v){D.locks.export=v;})]),
       h('div',{cls:'lic-sec'},[h('h3',{text:'Compra (opcional)'}),
+        h('p',{text:'Esto es lo que verá tu cliente al querer comprar. Llena al menos uno: precio, instrucciones o enlace.'}),
         txt('Texto del precio',function(){return D.price;},function(v){D.price=v;},'Licencia anual $4.99'),
-        txt('Enlace para comprar el código',function(){return D.buy;},function(v){D.buy=v.trim();},'https://','url')]),
+        txtArea('Cómo comprar (ej. escribe a mi WhatsApp +00 000 000 0000)',function(){return D.howto;},function(v){D.howto=v;},'Paga por transferencia y envíame el comprobante por WhatsApp.'),
+        txt('Enlace de pago (opcional)',function(){return D.buy;},function(v){D.buy=v.trim();},'https://','url'),
+        h('div',{cls:'lic-btns'},[h('button',{cls:'lic-btn',type:'button',text:'Ver cómo lo ve el cliente',onclick:function(){apply();openLic(null,true);}})])]),
       h('div',{cls:'lic-sec'},[h('h3',{text:'Códigos de licencia'}),
         h('p',{text:'Crea un código por persona. Cada uno dura el tiempo indicado desde que se activa.'}),
         list,h('div',{cls:'lic-btns'},[h('button',{cls:'lic-btn pri',type:'button',text:'Generar código',onclick:genCode})])]),
@@ -2419,7 +2481,7 @@ function sha256(msg){
         h('button',{cls:'lic-btn',type:'button',text:'Importar config.json',onclick:function(){imp.click();}}),imp]),
       h('div',{cls:'lic-btns'},[
         h('button',{cls:'lic-btn',type:'button',text:'Quitar cambios locales',onclick:function(){try{localStorage.removeItem(CK);}catch(e){}LCFG=mergeLic(jget(CC,null));refreshLic();adminPanel();}}),
-        h('button',{cls:'lic-btn',type:'button',text:'Cambiar contraseña',onclick:function(){try{localStorage.removeItem(AK);sessionStorage.removeItem('dv-admin');}catch(e){}refreshLic();openAdmin();}}),
+        h('button',{cls:'lic-btn',type:'button',text:'Cambiar contraseña',onclick:function(){apply();changePw();}}),
         h('button',{cls:'lic-btn bad',type:'button',text:'Cerrar sesión',onclick:function(){try{sessionStorage.removeItem('dv-admin');}catch(e){}refreshLic();closeDlg();}}),
         h('button',{cls:'lic-btn',type:'button',text:'Cerrar',onclick:closeDlg})])
     ]);
@@ -2436,8 +2498,12 @@ function sha256(msg){
   refreshLic();
   try{
     fetch('config.json?v='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(j){
-      jset(CC,j);LCFG=mergeLic(j,jget(CK,null));refreshLic();
-    }).catch(function(){});
+      cfgState='ok';jset(CC,j);
+      var m=mergeLic(j);remoteAdminH=m.admin?m.admin.h:'';
+      var loc=jget(CK,null);
+      if(loc&&JSON.stringify(mergeLic(loc))===JSON.stringify(m)){try{localStorage.removeItem(CK);}catch(e){}}
+      LCFG=mergeLic(j,jget(CK,null));refreshLic();
+    }).catch(function(){cfgState='fail';});
   }catch(e){}
   (function(){
     var l=jget(LK,null);
