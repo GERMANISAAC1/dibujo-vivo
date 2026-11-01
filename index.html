@@ -2058,7 +2058,8 @@ function sha256(msg){
       var o=arguments[a];if(!o||typeof o!=='object')continue;
       if(typeof o.enabled==='boolean')out.enabled=o.enabled;
       if(typeof o.days==='number'&&isFinite(o.days))out.days=Math.max(1,Math.min(3650,Math.round(o.days)));
-      if(typeof o.price==='string')out.price=o.price.slice(0,80);
+      if(typeof o.price==='number'&&isFinite(o.price))out.price=String(o.price);
+      else if(typeof o.price==='string')out.price=o.price.slice(0,80);
       if(typeof o.buy==='string')out.buy=o.buy.slice(0,300);
       if(typeof o.howto==='string')out.howto=o.howto.slice(0,500);
       if(typeof o.wa==='string')out.wa=o.wa.replace(/[^0-9]/g,'').slice(0,15);
@@ -2073,7 +2074,7 @@ function sha256(msg){
   /*PURE-END*/
   function jget(k,d){try{var t=localStorage.getItem(k);return t?JSON.parse(t):d;}catch(e){return d;}}
   function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
-  var LCFG=mergeLic(jget(CC,null),jget(CK,null));
+  var LCFG=mergeLic(jget(CC,null),adminOn()?jget(CK,null):null);
   var cfgState='pending',remoteAdminH=(function(){var c=jget(CC,null),m=c?mergeLic(c):null;return m&&m.admin?m.admin.h:'';})();
   function adminOn(){try{return sessionStorage.getItem('dv-admin')==='1'&&localStorage.getItem('dv-adminfree')!=='1';}catch(e){return false;}}
   function licInfo(){
@@ -2502,7 +2503,7 @@ function sha256(msg){
       var m=mergeLic(j);remoteAdminH=m.admin?m.admin.h:'';
       var loc=jget(CK,null);
       if(loc&&JSON.stringify(mergeLic(loc))===JSON.stringify(m)){try{localStorage.removeItem(CK);}catch(e){}}
-      LCFG=mergeLic(j,jget(CK,null));refreshLic();
+      LCFG=mergeLic(j,adminOn()?jget(CK,null):null);refreshLic();
     }).catch(function(){cfgState='fail';});
   }catch(e){}
   (function(){
