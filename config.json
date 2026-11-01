@@ -1,7 +1,9 @@
 {
   "enabled": true,
   "days": 365,
-  "price": "",
+  "price": "Licencia anual S/ 15",
+  "howto": "Paga por Yape o transferencia y envíame el comprobante por WhatsApp. Te mando tu código.",
+  "wa": "51972768061",
   "buy": "",
   "locks": {
     "pdf": true,
